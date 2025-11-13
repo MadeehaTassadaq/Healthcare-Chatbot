@@ -49,16 +49,13 @@ export default function HealthcareChat() {
     const currentInput = input;
     setInput("");
     setIsLoading(true);
-
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
     try {
-      const response = await fetch(
-        "https://healthcare-chatbot-4-0d6d.onrender.com/chat",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: currentInput }),
-        },
-      );
+      const response = await fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: currentInput }),
+      });
 
       const data = await response.json();
 
