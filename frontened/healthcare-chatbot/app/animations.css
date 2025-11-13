@@ -1,0 +1,15 @@
+@keyframes blue-green-text {
+  0% {
+    color: #007bff; /* blue */
+  }
+  50% {
+    color: #28a745; /* green */
+  }
+  100% {
+    color: #007bff; /* blue */
+  }
+}
+
+.animate-blue-green-text {
+  animation: blue-green-text 4s ease-in-out infinite;
+}
