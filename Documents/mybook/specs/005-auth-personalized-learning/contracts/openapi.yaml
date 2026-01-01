@@ -1,0 +1,699 @@
+openapi: 3.0.3
+info:
+  title: Authenticated Personalized Learning API
+  description: API for user authentication, profile management, and content personalization
+  version: 1.0.0
+  contact:
+    name: Physical AI Book
+    email: support@physical-ai-book.example.com
+
+servers:
+  - url: https://api.physical-ai-book.example.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User registration and sign-in operations
+  - name: Profile
+    description: User profile management and GDPR operations
+  - name: Preferences
+    description: Chapter personalization and progress tracking
+
+paths:
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user account
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Sign in to existing account
+      operationId: signin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigninRequest'
+      responses:
+        '200':
+          description: Sign-in successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/signout:
+    post:
+      tags:
+        - Authentication
+      summary: Sign out current session
+      operationId: signout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sign-out successful
+        '401':
+          description: Not authenticated
+
+  /auth/session:
+    get:
+      tags:
+        - Authentication
+      summary: Get current session details
+      operationId: getSession
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: Session invalid or expired
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token using refresh cookie
+      operationId: refreshToken
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Refresh token invalid or expired
+
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get authenticated user's profile
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          description: Not authenticated
+
+    put:
+      tags:
+        - Profile
+      summary: Update user profile
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          description: Invalid update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+
+    delete:
+      tags:
+        - Profile
+      summary: Delete user account (GDPR)
+      operationId: deleteAccount
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '202':
+          description: Deletion initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteAccountResponse'
+        '401':
+          description: Not authenticated
+        '403':
+          description: Re-authentication required
+
+  /profile/export:
+    get:
+      tags:
+        - Profile
+      summary: Export user data (GDPR portability)
+      operationId: exportProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Data exported as JSON
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not authenticated
+
+  /preferences:
+    get:
+      tags:
+        - Preferences
+      summary: Get all chapter preferences for authenticated user
+      operationId: getPreferences
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Preferences retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+        '401':
+          description: Not authenticated
+
+    put:
+      tags:
+        - Preferences
+      summary: Update preferences for multiple chapters
+      operationId: updatePreferences
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesUpdateRequest'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+        '401':
+          description: Not authenticated
+
+  /preferences/{chapterSlug}:
+    parameters:
+      - name: chapterSlug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Docusaurus chapter slug
+    get:
+      tags:
+        - Preferences
+      summary: Get preference for specific chapter
+      operationId: getChapterPreference
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Chapter preference retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterPreference'
+        '401':
+          description: Not authenticated
+        '404':
+          description: Chapter not found
+
+    put:
+      tags:
+        - Preferences
+      summary: Update preference for specific chapter
+      operationId: updateChapterPreference
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChapterPreferenceUpdate'
+      responses:
+        '200':
+          description: Chapter preference updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterPreference'
+        '401':
+          description: Not authenticated
+
+  /progress:
+    get:
+      tags:
+        - Preferences
+      summary: Get reading progress across all chapters
+      operationId: getProgress
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Progress retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResponse'
+        '401':
+          description: Not authenticated
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Authentication
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+        - profile
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        profile:
+          $ref: '#/components/schemas/ProfileData'
+        consent:
+          type: boolean
+          description: User consent to terms and data processing
+
+    SigninRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserInfo'
+        session:
+          $ref: '#/components/schemas/SessionInfo'
+
+    SessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: '#/components/schemas/SessionInfo'
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    SessionInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # Profile
+    ProfileResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        profile:
+          $ref: '#/components/schemas/ProfileData'
+        preferences:
+          $ref: '#/components/schemas/PreferencesSummary'
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/ProfileDataPartial'
+
+    ProfileData:
+      type: object
+      required:
+        - software
+        - hardware
+      properties:
+        software:
+          $ref: '#/components/schemas/SoftwareBackground'
+        hardware:
+          $ref: '#/components/schemas/HardwareBackground'
+
+    ProfileDataPartial:
+      type: object
+      properties:
+        software:
+          $ref: '#/components/schemas/SoftwareBackgroundPartial'
+        hardware:
+          $ref: '#/components/schemas/HardwareBackgroundPartial'
+
+    SoftwareBackground:
+      type: object
+      required:
+        - languages
+        - frameworks
+        - tools
+        - experienceLevel
+      properties:
+        languages:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        frameworks:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        tools:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        experienceLevel:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+
+    SoftwareBackgroundPartial:
+      type: object
+      properties:
+        languages:
+          type: array
+          items:
+            type: string
+        frameworks:
+          type: array
+          items:
+            type: string
+        tools:
+          type: array
+          items:
+            type: string
+        experienceLevel:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+
+    HardwareBackground:
+      type: object
+      required:
+        - platforms
+        - sensors
+        - actuators
+        - experienceLevel
+      properties:
+        platforms:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        sensors:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        actuators:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        experienceLevel:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+
+    HardwareBackgroundPartial:
+      type: object
+      properties:
+        platforms:
+          type: array
+          items:
+            type: string
+        sensors:
+          type: array
+          items:
+            type: string
+        actuators:
+          type: array
+          items:
+            type: string
+        experienceLevel:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+
+    DeleteAccountRequest:
+      type: object
+      required:
+        - password
+        - confirmDelete
+      properties:
+        password:
+          type: string
+        confirmDelete:
+          type: boolean
+          const: true
+
+    DeleteAccountResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        deletionCompletedAt:
+          type: string
+          format: date-time
+
+    # Preferences
+    PreferencesResponse:
+      type: object
+      properties:
+        chapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChapterPreference'
+
+    PreferencesUpdateRequest:
+      type: object
+      properties:
+        chapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChapterPreferenceUpdate'
+
+    ChapterPreference:
+      type: object
+      properties:
+        chapterSlug:
+          type: string
+        personalized:
+          type: boolean
+        progress:
+          type: string
+          enum:
+            - not-started
+            - in-progress
+            - completed
+        lastPosition:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    ChapterPreferenceUpdate:
+      type: object
+      required:
+        - chapterSlug
+      properties:
+        chapterSlug:
+          type: string
+        personalized:
+          type: boolean
+        progress:
+          type: string
+          enum:
+            - not-started
+            - in-progress
+            - completed
+        lastPosition:
+          type: integer
+
+    PreferencesSummary:
+      type: object
+      properties:
+        totalChapters:
+          type: integer
+        personalizedCount:
+          type: integer
+        completedCount:
+          type: integer
+        inProgressCount:
+          type: integer
+
+    # Progress
+    ProgressResponse:
+      type: object
+      properties:
+        chapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChapterProgress'
+        overall:
+          type: object
+          properties:
+            total:
+              type: integer
+            completed:
+              type: integer
+            percentage:
+              type: number
+
+    ChapterProgress:
+      type: object
+      properties:
+        chapterSlug:
+          type: string
+        title:
+          type: string
+        progress:
+          type: string
+          enum:
+            - not-started
+            - in-progress
+            - completed
+        lastPosition:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # Errors
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
